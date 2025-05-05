@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Sorter</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --fg: #1D1D1F;
+      --subtle: #3C3C4399;
+      --primary: #007AFF;
+      --error: #FF3B30;
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --transition: 0.2s ease-in-out;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    main {
+      background: #FFF;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%; max-width: 360px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .dropzone {
+      position: relative;
+      padding: 1rem;
+      border: 2px dashed #D1D1D6;
+      border-radius: var(--radius);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .dropzone.hover {
+      border-color: var(--primary);
+      background: rgba(0,122,255,0.05);
+    }
+    .dropzone input {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .dropzone p {
+      margin: 0;
+      color: var(--subtle);
+      font-size: 0.875rem;
+    }
+    button {
+      background: var(--primary);
+      color: #FFF;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    button:disabled {
+      background: var(--subtle);
+      cursor: not-allowed;
+    }
+    button:hover:enabled {
+      background: #005BB5;
+    }
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+    }
+    #loading.visible { display: flex; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #FFF;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .alert {
+      background: #E5F1FB;
+      color: var(--primary);
+      padding: 1rem;
+      border-radius: var(--radius);
+      text-align: center;
+      font-size: 0.875rem;
+    }
+    .alert a {
+      color: var(--primary);
+      text-decoration: underline;
+      font-weight: 600;
+    }
+    a { outline: none; }
+    button:focus,
+    .dropzone:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <main role="main">
+    <h1>PDF Sorter</h1>
+    <div class="dropzone" id="dropzone" tabindex="0">
+      <p>Drag & drop your PDF here<br>or click to select</p>
+      <input type="file" id="pdfFile" name="pdfFile" accept="application/pdf" required>
+    </div>
+    <button id="uploadBtn" disabled>Upload & Sort</button>
+    <div id="result" class="alert" role="status" aria-live="polite" style="display:none;">
+      Sorted PDF ready! <a id="download-link" href="#">Download</a>
+    </div>
+  </main>
+  <div id="loading" role="status" aria-live="polite">
+    <div class="spinner" aria-label="Loading"></div>
+  </div>
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('pdfFile');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    let file;
+
+    ['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, e => {
+      e.preventDefault(); dropzone.classList.add('hover');
+    }));
+    ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+      e.preventDefault(); dropzone.classList.remove('hover');
+    }));
+    dropzone.addEventListener('drop', e => {
+      fileInput.files = e.dataTransfer.files;
+      handleFile();
+    });
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFile);
+
+    function handleFile() {
+      if (fileInput.files.length) {
+        file = fileInput.files[0];
+        uploadBtn.disabled = false;
+      }
+    }
+
+    uploadBtn.addEventListener('click', async () => {
+      uploadBtn.disabled = true;
+      loading.classList.add('visible');
+      const formData = new FormData();
+      formData.append('pdfFile', file);
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          document.getElementById('download-link').href = url;
+          result.style.display = 'block';
+        } else throw new Error();
+      } catch {
+        alert('Failed to sort.');
+      } finally {
+        loading.classList.remove('visible');
+        uploadBtn.disabled = true;
+      }
+    });
+  </script>
+</body>
+</html>
