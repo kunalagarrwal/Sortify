@@ -129,7 +129,7 @@
   <main role="main">
     <h1>PDF Sorter</h1>
     <div class="dropzone" id="dropzone" tabindex="0">
-      <p>Drag & drop your PDF here<br>or click to select</p>
+      <p id="fileNameDisplay">Drag & drop your PDF here<br>or click to select</p>
       <input type="file" id="pdfFile" name="pdfFile" accept="application/pdf" required>
     </div>
     <div style="position: relative; width: 100%;">
@@ -198,12 +198,15 @@
       fileInput.files = e.dataTransfer.files;
       handleFile();
     });
-    dropzone.addEventListener('click', () => fileInput.click());
+    // remove duplicate prompt
+// dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFile);
 
     function handleFile() {
       if (fileInput.files.length) {
         file = fileInput.files[0];
+        const fileName = file.name;
+        document.getElementById('fileNameDisplay').innerHTML = `Selected File: <strong>${fileName}</strong>`;
         uploadBtn.disabled = false;
       }
     }
@@ -242,4 +245,3 @@
   </script>
 </body>
 </html>
-
